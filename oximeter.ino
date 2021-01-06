@@ -4,9 +4,11 @@
 #include <ESP8266WiFi.h>
 #include <Adafruit_GFX.h>
 #include <OakOLED.h>
-#include <ThingerESP8266.h>
+#include <Blynk.h>
+#include <BlynkSimpleEsp8266.h>
 
-#define PUSH_BUTTON 14
+#include "button.h"
+
 
 // Defined MAX30100 sampling & reporting period
 #define SAMPLING_PERIOD_MS 5000
@@ -16,11 +18,8 @@
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 
-// Setup thinger device credentials
-#define USERNAME "alfialdo"
-#define DEVICE_ID "oximeter"
-#define DEVICE_CREDENTIAL "7VyWsXnEp3sOZx"
-ThingerESP8266 thing(USERNAME, DEVICE_ID, DEVICE_CREDENTIAL);
+// Setup blynk device credentials
+#define AUTH_BLYNK "k9nkD6eI76yIdR513T3i1pAUNqTyliPa"
 
 // Setup network credentials
 #define SSID "∆x"
@@ -28,20 +27,21 @@ ThingerESP8266 thing(USERNAME, DEVICE_ID, DEVICE_CREDENTIAL);
 
 PulseOximeter Oximeter;
 OakOLED oled;
+Button b1(14);
 
 float heartValue;
 int oxygenValue;
 unsigned long currentMillis;
 uint32_t lastReport = 0;
-bool circuitIsEnabled = true;
 
 void readOximeter(float heartValue, int oxygenValue);
 void initializeOLED();
 void initializeWiFi();
 void initializeOximeter();
-void initializeThinger();
+void initializeBlynk();
 void handleButton();
 void showSensorValue();
+
 
 void setup() {
 
@@ -55,20 +55,24 @@ void setup() {
     initializeOLED();
     initializeWiFi();
     initializeOximeter();
-    initializeThinger();
+    initializeBlynk();
 
     Oximeter.setIRLedCurrent(MAX30100_LED_CURR_7_6MA);
 
 }
 
-void loop () {
-    // thing.handle();
-    // int buttonValue = digitalRead(PUSH_BUTTON);
-    // uint32_t lastSample = 0;
+void loop () { 
     readOximeter(heartValue, oxygenValue);
-    // Oximeter.shutdown();
-    // handleButton();
 
+    int pressedTime = b1.handlePress(100);
+
+    if (pressedTime != 0) {
+        if (pressedTime < 3000) {
+            Serial.println("clicked!");
+        } else {
+            Serial.println("hold!");
+        }
+    }
 }
 
 // Initialize and checking Oximeter Sensor
@@ -106,11 +110,9 @@ void initializeWiFi() {
     Serial.println(WiFi.localIP());
 }
 
-// Initialize thinger.io dashboard and platform connection
-void initializeThinger() {
-    thing.add_wifi(SSID, SSID_PASSWORD);
-    thing["heartRate"] >> outputValue(heartValue);
-    thing["oxygenSaturation"] >> outputValue(oxygenValue);
+// Initialize Blynk dashboard and platform connection
+void initializeBlynk() {
+    Blynk.begin(AUTH_BLYNK, SSID, SSID_PASSWORD);
 }
 
 // Display Heart Rate and Oxygen Rate value on OLED LCD
@@ -145,6 +147,7 @@ void showSensorValue() {
 // Getting Heart Rate and Oxygen value from MAX30100 Sensor 
 void readOximeter(float heartValue, int oxygenValue) {
     Oximeter.update();
+    Blynk.run();
     heartValue = Oximeter.getHeartRate();
     oxygenValue = Oximeter.getSpO2();
 
@@ -156,29 +159,13 @@ void readOximeter(float heartValue, int oxygenValue) {
         Serial.print(oxygenValue);
         Serial.println("%\n");
 
+        Blynk.virtualWrite(V6, heartValue);
+        Blynk.virtualWrite(V7, oxygenValue);
+
         showSensorValue();
         lastReport = millis();
     }
 }
 
-// Handle button press and hold, then execute functions
-void handleButton() {
-    long int pulseDuration = pulseIn(PUSH_BUTTON, HIGH, 1000000);
 
-    // If pulseDuration is less than 3 seconds
-    if (pulseDuration == 0) return;
-    if (pulseDuration  < 3000000) {
-        if (circuitIsEnabled) {
-            // Oximeter.shutdown();
-            circuitIsEnabled = false;
-        } else {
-            // initializeOximeter();
-            circuitIsEnabled = true;
-        }
-        Serial.println("Clicked");
-    } else {
-        // TODO: implement emergency message using things.call_endpoint
-        Serial.println("Hold!");
-    }
-}
 
