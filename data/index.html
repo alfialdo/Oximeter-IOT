@@ -2,10 +2,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script></script>
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+    <style>
+        body {
+            min-width: 310px;
+            max-width: 800px;
+            height: 400px;
+            margin: 0 auto;
+        }
+        h2 {
+            font-family: Arial;
+            font-size: 2.5rem;
+            text-align: center;
+        }
+      </style>
+
     <title>Document</title>
 </head>
 <body>
-    
+    <h2>Cloud-Base Oximeter</h2>
+    <div id="chart-heartRate" class="container"></div>
+    <div id="chart-oxygenSaturation" class="container"></div>
 </body>
+<script>
+    var chartHR = new Highcharts.Chart ({
+        chart: {renderTo: 'chart-heartRate'},
+        title: {text: 'Heart Rate'},
+        series: [{
+            showInLegend: false,
+            data: []
+        }],
+        plotOptions: {
+            line: {
+                animation: false,
+                dataLabel: { enabled: true}
+            },
+            series: { color: '#059E8A'}
+        },
+        xAxis: {
+            type: 'datetime',
+            dateTimeLabelFormats: {second: '%H:%M:%S'}
+        },
+        yAxis: {
+            title: {text: 'Heart Rate (bpm)'}
+        },
+        credits: { enabled: false }
+    });
+
+    setInterval(function() {
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function () {
+            if (this.readyState == 4 && this.status == 200) {
+                var x = (new Date()).getTime();
+                var y = parseFloat(this.responseText);
+
+                if (chartHR.series[0].datalength > 40) {
+                    chartHR.series[0].addPoint([x, y], true, true, true);
+                }
+                else {
+                    chartHR.series[0].addPoint([x, y], true, false , true);
+                }
+            }
+        };
+        xhttp.open("GET", "/heartrate");
+        xhttp.send();
+    }, 30000);
+
+    var chartOS = new Highcharts.Chart ({
+        chart: {renderTo: 'chart-oxygenSaturation'},
+        title: {text: 'Oxygen Saturation'},
+        series: [{
+            showInLegend: false,
+            data: []
+        }],
+        plotOptions: {
+            line: {
+                animation: false,
+                dataLabel: { enabled: true}
+            },
+            series: { color: '#059E8A'}
+        },
+        xAxis: {
+            type: 'datetime',
+            dateTimeLabelFormats: {second: '%H:%M:%S'}
+        },
+        yAxis: {
+            title: {text: 'Oxygen Saturation (SpO2)'}
+        },
+        credits: { enabled: false }
+    });
+
+    setInterval(function() {
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function () {
+            if (this.readyState == 4 && this.status == 200) {
+                var x = (new Date()).getTime();
+                var y = parseFloat(this.responseText);
+
+                if (chartOS.series[0].datalength > 40) {
+                    chartOS.series[0].addPoint([x, y], true, true, true);
+                }
+                else {
+                    chartOS.series[0].addPoint([x, y], true, false , true);
+                }
+            }
+        };
+        xhttp.open("GET", "/oxygensaturation");
+        xhttp.send();
+    }, 30000);
+
+</script>
 </html>
